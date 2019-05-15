@@ -9,7 +9,6 @@ Python library that interacts with SIP to build an indicator whitelist system.
 ## SIPWhitelist parameters
     whitelist_tags: Required. List of indicator tags to build your whitelist.
     sip: Required. PySIP connection.
-    urlshortener_tags: Optional.
     
 ## Example Usage
 Creating a SIPWhitelist object will look something like this:
@@ -18,7 +17,7 @@ Creating a SIPWhitelist object will look something like this:
     from sipwhitelist import SIPWhitelist
 
     sip = pysip.Client('localhost:4443', '11111111-1111-1111-1111-111111111111', verify=False)
-    w = SIPWhitelist(['whitelist:e2w'], sip, urlshortener_tags=['urlshortener:e2w'])
+    w = SIPWhitelist(['whitelist:e2w'], sip)
     
 ## Functionality
 When you create the SIPWhitelist object, you must specify the "whitelist_tags" attribute. This is a list of tags you want include when searching the Deprecated indicators in SIP to build the whitelist.
@@ -141,12 +140,6 @@ Example: If ".css" is whitelisted, then:
 Example: If "/social/signin/" is whitelisted, then:
 
 * "/social" is whitelisted.
-
-If you specified the "urlshortener_tags" parameter when creating the SIPWhitelist object, the following is an example of its intended functionality:
-
-* If "goo.gl" is one of the Deprecated indicators tagged with one of your "urlshortener_tags", then:
-    * The URL "http://goo.gl/aE81b" will NOT be whitelisted. However,
-    * The URI path "/aE81b" will be whitelisted if "goo.gl" is listed as one of the relationships. The idea behind this is that URL shorteners use very short URI paths, which are commonly found as random base64 strings inside e-mails or other documents.
 
 **is_domain_whitelisted(domain, value_in_indicator=False, indicator_in_value=True)**
 
