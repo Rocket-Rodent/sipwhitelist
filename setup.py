@@ -23,14 +23,14 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.1',
+    version='0.2.0',
 
     description='Library that interacts with SIP to build an indicator whitelist system.',
     long_description=long_description,
     long_description_content_type='text/markdown',
 
     # The project's main homepage.
-    url='https://github.com/IntegralDefense/sipwhitelist',
+    url='https://github.com/ace-ecosystem/sipwhitelist',
 
     # Author details
     author='Matthew Wilson',
