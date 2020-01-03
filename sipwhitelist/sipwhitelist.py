@@ -105,8 +105,12 @@ class SIPWhitelist:
         except:
             pass
 
-    def _is_whitelisted(self, thing, indicator_types, value_in_indicator=True, indicator_in_value=False):
+    def _is_whitelisted(self, thing, indicator_types, value_in_indicator=True, indicator_in_value=False, verbose_check=False):
         """ Check if 'thing' is whitelisted by the given indicator types. """
+
+        # helpful debug log
+        self.logger.debug("Checking for '{}' with types:{} and value_in_indicator={} and indicator_in_value={} and verbose_check={}\
+                              ".format(thing, indicator_types, value_in_indicator, indicator_in_value, verbose_check))
 
         # Make sure we actually have a "thing".
         if not thing:
@@ -118,6 +122,9 @@ class SIPWhitelist:
             return True
         if self._is_cached_nonwhitelisted(thing):
             return False
+        
+        # used if verbose_check is True
+        results = {}
 
         try:
             for indicator_type in indicator_types:
@@ -127,7 +134,12 @@ class SIPWhitelist:
                         if thing.lower() == indicator.lower():
                             self._add_whitelisted_cache(thing)
                             self.logger.debug('Exact {} whitelist match: {}'.format(indicator_type, thing))
-                            return True
+                            if verbose_check:
+                                if indicator_type not in results:
+                                    results[indicator_type] = []
+                                results[indicator_type].append((thing, indicator))
+                            else:
+                                return True
                         # Check if we want to look for the value inside the indicator.
                         # This accounts for there already being a more specific version of
                         # "thing" already whitelisted in SIP.
@@ -135,17 +147,30 @@ class SIPWhitelist:
                             if thing.lower() in indicator.lower():
                                 self._add_whitelisted_cache(thing)
                                 self.logger.debug('{} is in whitelisted {} indicator: {}'.format(thing, indicator_type, indicator))
-                                return True
+                                if verbose_check:
+                                    if indicator_type not in results:
+                                        results[indicator_type] = []
+                                    results[indicator_type].append((thing, indicator))
+                                else:
+                                    return True
                         # Check if we want to look for the indicator inside the value.
                         # This accounts for things like file paths, where we want to
                         # whitelist a directory and everything inside of it.
                         if indicator_in_value:
                             if indicator.lower() in thing.lower():
                                 self._add_whitelisted_cache(thing)
-                                self.logger.debug('Whitelisted {} indicator {} is in: {}'.format(indicator_type, indicator, thing))
-                                return True
+                                self.logger.debug('Whitelisted {} indicator {} is in: {}'.format(indicator_type, thing, indicator))
+                                if verbose_check:
+                                    if indicator_type not in results:
+                                        results[indicator_type] = []
+                                    results[indicator_type].append((thing, indicator))
+                                else:
+                                    return True
         except:
             self.logger.exception('Could not check "{}" against whitelist types: {}'.format(thing, indicator_types))
+
+        if verbose_check and results:
+            return results
 
         self._add_nonwhitelisted_cache(thing)
         return False
@@ -155,7 +180,7 @@ class SIPWhitelist:
     # FILE WHITELIST
     #
     """
-    def _is_hash_whitelisted(self, hash_value, hash_type):
+    def _is_hash_whitelisted(self, hash_value, hash_type, **kwargs):
         """ Returns True if the hash_value is invalid or whitelisted. """
 
         # First check if the hash_value was already cached.
@@ -190,54 +215,54 @@ class SIPWhitelist:
             self._add_whitelisted_cache(hash_value)
             return True
 
-        return self._is_whitelisted(hash_value, [hash_type], value_in_indicator=False)
+        return self._is_whitelisted(hash_value, [hash_type], value_in_indicator=False, **kwargs)
 
-    def is_md5_whitelisted(self, md5):
+    def is_md5_whitelisted(self, md5, **kwargs):
         """ Returns True if the MD5 is invalid or whitelisted. """
 
         return self._is_hash_whitelisted(md5, 'Hash - MD5')
 
-    def is_sha1_whitelisted(self, sha1):
+    def is_sha1_whitelisted(self, sha1, **kwargs):
         """ Returns True if the SHA1 is invalid or whitelisted. """
 
-        return self._is_hash_whitelisted(sha1, 'Hash - SHA1')
+        return self._is_hash_whitelisted(sha1, 'Hash - SHA1', **kwargs)
 
-    def is_sha256_whitelisted(self, sha256):
+    def is_sha256_whitelisted(self, sha256, **kwargs):
         """ Returns True if the SHA256 is invalid or whitelisted. """
 
-        return self._is_hash_whitelisted(sha256, 'Hash - SHA256')
+        return self._is_hash_whitelisted(sha256, 'Hash - SHA256', **kwargs)
 
-    def is_sha512_whitelisted(self, sha512):
+    def is_sha512_whitelisted(self, sha512, **kwargs):
         """ Returns True if the SHA512 is invalid or whitelisted. """
 
-        return self._is_hash_whitelisted(sha512, 'Hash - SHA512')
+        return self._is_hash_whitelisted(sha512, 'Hash - SHA512', **kwargs)
 
-    def is_ssdeep_whitelisted(self, ssdeep):
+    def is_ssdeep_whitelisted(self, ssdeep, **kwargs):
         """ Returns True if the ssdeep is whitelisted. """
 
-        return self._is_whitelisted(ssdeep, ['Hash - SSDEEP'])
+        return self._is_whitelisted(ssdeep, ['Hash - SSDEEP'], **kwargs)
 
-    def is_file_name_whitelisted(self, name, value_in_indicator=False, indicator_in_value=True):
+    def is_file_name_whitelisted(self, name, value_in_indicator=False, indicator_in_value=True, **kwargs):
         """ Returns True if the file name is whitelisted. """
 
-        return self._is_whitelisted(name, ['Windows - FileName'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value)
+        return self._is_whitelisted(name, ['Windows - FileName'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value, **kwargs)
 
-    def is_file_path_whitelisted(self, path, value_in_indicator=True, indicator_in_value=True):
+    def is_file_path_whitelisted(self, path, value_in_indicator=True, indicator_in_value=True, **kwargs):
         """ Returns True if the file path is whitelisted. """
 
-        return self._is_whitelisted(path, ['Windows - FilePath'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value)
+        return self._is_whitelisted(path, ['Windows - FilePath'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value, **kwargs)
 
     """
     #
     # EMAIL WHITELIST
     #
     """
-    def is_email_subject_whitelisted(self, subject, value_in_indicator=True, indicator_in_value=False):
+    def is_email_subject_whitelisted(self, subject, value_in_indicator=True, indicator_in_value=False, **kwargs):
         """ Returns True if the subject is whitelisted. """
 
-        return self._is_whitelisted(subject, ['Email - Subject'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value)
+        return self._is_whitelisted(subject, ['Email - Subject'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value, **kwargs)
 
-    def is_email_address_whitelisted(self, address, value_in_indicator=True, indicator_in_value=False):
+    def is_email_address_whitelisted(self, address, value_in_indicator=True, indicator_in_value=False, **kwargs):
         """ Returns True if the email address is whitelisted. """
 
         # First check if the address was already cached.
@@ -268,14 +293,14 @@ class SIPWhitelist:
             self._add_whitelisted_cache(address)
             return True
 
-        return self._is_whitelisted(address, ['Email - Address', 'WHOIS Registrant Email Address', 'Email Address From', 'Email Address Sender'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value)
+        return self._is_whitelisted(address, ['Email - Address', 'WHOIS Registrant Email Address', 'Email Address From', 'Email Address Sender'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value, **kwargs)
 
     """
     #
     # NETWORK WHITELIST
     #
     """
-    def is_url_whitelisted(self, u, value_in_indicator=False, indicator_in_value=False):
+    def is_url_whitelisted(self, u, value_in_indicator=False, indicator_in_value=False, **kwargs):
         """ Returns True if the URL is invalid or is whitelisted. """
 
         # First check if the URL was already cached.
@@ -317,7 +342,9 @@ class SIPWhitelist:
                 return True
         # If we got an exception, it must be a domain name.
         except:
-            if self.is_domain_whitelisted(netloc):
+            result = self.is_domain_whitelisted(netloc, **kwargs)
+            print(result)
+            if result:
                 self._add_whitelisted_cache(u)
                 self.logger.debug('URL whitelisted because of domain: {}'.format(u))
                 return True
@@ -333,13 +360,13 @@ class SIPWhitelist:
         if split_url.query:
             if self.is_uri_path_whitelisted(split_url.query):
                 self._add_whitelisted_cache(u)
-                self.logger.debug('URL whitelisted because of query: {}'.format(u))
+                self.logger.debug('URL whitelisted "{}" because of query: {}'.format(u, split_url.query))
                 return True
 
         # Finally check the entire URL.
-        return self._is_whitelisted(u, ['URI - URL'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value)
+        return self._is_whitelisted(u, ['URI - URL'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value, **kwargs)
 
-    def is_uri_path_whitelisted(self, path, relationships=[], value_in_indicator=True, indicator_in_value=True):
+    def is_uri_path_whitelisted(self, path, relationships=[], value_in_indicator=True, indicator_in_value=True, **kwargs):
         """ Returns True if the URI path is whitelisted. """
 
         # First check if the path was already cached.
@@ -378,9 +405,9 @@ class SIPWhitelist:
                     self.logger.debug('{} URI - Path whitelisted because of relationship to URL: {}'.format(path, r))
                     return True
 
-        return self._is_whitelisted(path, ['URI - Path'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value)
+        return self._is_whitelisted(path, ['URI - Path'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value, **kwargs)
 
-    def is_domain_whitelisted(self, domain, value_in_indicator=False, indicator_in_value=True):
+    def is_domain_whitelisted(self, domain, value_in_indicator=False, indicator_in_value=True, **kwargs):
         """ Returns True if the domain has an invalid TLD or is whitelisted. """
 
         # First check if the domain was already cached.
@@ -395,9 +422,9 @@ class SIPWhitelist:
             self.logger.debug('Invalid domain: {}'.format(domain))
             return True
 
-        return self._is_whitelisted(domain, ['URI - Domain Name'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value)
+        return self._is_whitelisted(domain, ['URI - Domain Name'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value, **kwargs)
 
-    def is_ip_whitelisted(self, ip, value_in_indicator=False, indicator_in_value=False):
+    def is_ip_whitelisted(self, ip, value_in_indicator=False, indicator_in_value=False, **kwargs):
         """ Returns True if the IP is invalid, private, or whitelisted. """
 
         # First check if the IP was already cached.
@@ -439,4 +466,4 @@ class SIPWhitelist:
             self.logger.exception('Could not check IP "{}" against whitelisted networks'.format(ip))
 
         # Lastly check if the IP address itself is whitelisted.
-        return self._is_whitelisted(ip, ['Address - ipv4-addr', 'Email Originating IP', 'Email X-Originating IP'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value)
+        return self._is_whitelisted(ip, ['Address - ipv4-addr', 'Email Originating IP', 'Email X-Originating IP'], value_in_indicator=value_in_indicator, indicator_in_value=indicator_in_value, **kwargs)
