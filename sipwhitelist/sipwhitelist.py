@@ -67,6 +67,7 @@ class SIPWhitelist:
         """ Adds 'thing' to the whitelisted cache. Removes it from the nonwhitelisted cache if it exists. """
 
         try:
+            self.logger.debug("Adding '{}' to the whitelist cache.".format(thing))
             self.cache_whitelisted.append(str(thing).lower())
         except:
             pass
@@ -138,6 +139,7 @@ class SIPWhitelist:
                                 if indicator_type not in results:
                                     results[indicator_type] = []
                                 results[indicator_type].append((thing, indicator))
+                                continue
                             else:
                                 return True
                         # Check if we want to look for the value inside the indicator.
@@ -151,6 +153,7 @@ class SIPWhitelist:
                                     if indicator_type not in results:
                                         results[indicator_type] = []
                                     results[indicator_type].append((thing, indicator))
+                                    continue
                                 else:
                                     return True
                         # Check if we want to look for the indicator inside the value.
